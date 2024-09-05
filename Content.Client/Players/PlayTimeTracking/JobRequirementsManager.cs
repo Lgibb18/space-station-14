@@ -2,7 +2,9 @@
 using Content.Client.Lobby;
 using Content.Shared.CCVar;
 using Content.Shared.Players;
+using Content.Shared.Players.JobWhitelist;
 using Content.Shared.Players.PlayTimeTracking;
+using Content.Shared.Preferences;
 using Content.Shared.Roles;
 using Robust.Client;
 using Robust.Client.Player;
@@ -11,7 +13,7 @@ using Robust.Shared.Network;
 using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Utility;
-using Content.Shared.Preferences;
+using Content.Sunrise.Interfaces.Shared; // Sunrise-Sponsors
 
 namespace Content.Client.Players.PlayTimeTracking;
 
@@ -27,8 +29,11 @@ public sealed class JobRequirementsManager : ISharedPlaytimeManager
 
     private readonly Dictionary<string, TimeSpan> _roles = new();
     private readonly List<string> _roleBans = new();
+    private readonly List<string> _jobWhitelists = new();
 
     private ISawmill _sawmill = default!;
+
+    private ISharedSponsorsManager? _sponsorsMgr;  // Sunrise-Sponsors
 
     public event Action? Updated;
 
@@ -39,8 +44,11 @@ public sealed class JobRequirementsManager : ISharedPlaytimeManager
         // Yeah the client manager handles role bans and playtime but the server ones are separate DEAL.
         _net.RegisterNetMessage<MsgRoleBans>(RxRoleBans);
         _net.RegisterNetMessage<MsgPlayTime>(RxPlayTime);
+        _net.RegisterNetMessage<MsgJobWhitelist>(RxJobWhitelist);
 
         _client.RunLevelChanged += ClientOnRunLevelChanged;
+
+        IoCManager.Instance!.TryResolveType(out _sponsorsMgr);  // Sunrise-Sponsors
     }
 
     private void ClientOnRunLevelChanged(object? sender, RunLevelChangedEventArgs e)
@@ -82,7 +90,14 @@ public sealed class JobRequirementsManager : ISharedPlaytimeManager
         Updated?.Invoke();
     }
 
-    public bool IsAllowed(JobPrototype job, [NotNullWhen(false)] out FormattedMessage? reason)
+    private void RxJobWhitelist(MsgJobWhitelist message)
+    {
+        _jobWhitelists.Clear();
+        _jobWhitelists.AddRange(message.Whitelist);
+        Updated?.Invoke();
+    }
+
+    public bool IsAllowed(JobPrototype job, HumanoidCharacterProfile? profile, [NotNullWhen(false)] out FormattedMessage? reason)
     {
         reason = null;
 
@@ -92,37 +107,46 @@ public sealed class JobRequirementsManager : ISharedPlaytimeManager
             return false;
         }
 
+        if (!CheckWhitelist(job, out reason))
+            return false;
+
         var player = _playerManager.LocalSession;
         if (player == null)
             return true;
 
         // Sunrise-Start
-        if (_clientPreferences.Preferences != null)
+        if (profile != null)
         {
-            var profile = (HumanoidCharacterProfile) _clientPreferences.Preferences.SelectedCharacter;
-
             if (job.SpeciesBlacklist.Contains(profile.Species))
             {
-                reason = FormattedMessage.FromUnformatted($"Расса {Loc.GetString($"species-name-{profile.Species.ToLower()}")} не может занимать эту должность. Для спонсоров ограничений нет");
+                reason = FormattedMessage.FromUnformatted(Loc.GetString("species-job-fail", ("name", Loc.GetString($"species-name-{profile.Species.Id.ToLower()}"))));
                 return false;
             }
         }
         // Sunrise-End
 
-        return CheckRoleTime(job.Requirements, out reason);
+        return CheckRoleRequirements(job, profile, out reason);
     }
 
-    public bool CheckRoleTime(HashSet<JobRequirement>? requirements, [NotNullWhen(false)] out FormattedMessage? reason)
+    public bool CheckRoleRequirements(JobPrototype job, HumanoidCharacterProfile? profile, [NotNullWhen(false)] out FormattedMessage? reason)
+    {
+        var reqs = _entManager.System<SharedRoleSystem>().GetJobRequirement(job);
+        return CheckRoleRequirements(reqs, job.ID, profile, out reason); // Sunrise-Edit
+    }
+
+    public bool CheckRoleRequirements(HashSet<JobRequirement>? requirements, string protoId, HumanoidCharacterProfile? profile, [NotNullWhen(false)] out FormattedMessage? reason) // Sunrise-Edit
     {
         reason = null;
 
         if (requirements == null || !_cfg.GetCVar(CCVars.GameRoleTimers))
             return true;
 
+        var sponsorPrototypes = _sponsorsMgr?.GetClientPrototypes().ToArray() ?? []; // Sunrise-Sponsors
+
         var reasons = new List<string>();
         foreach (var requirement in requirements)
         {
-            if (JobRequirements.TryRequirementMet(requirement, _roles, out var jobReason, _entManager, _prototypes))
+            if (requirement.Check(_entManager, _prototypes, profile, _roles, protoId, sponsorPrototypes, out var jobReason)) // Sunrise-Sponsors
                 continue;
 
             reasons.Add(jobReason.ToMarkup());
@@ -130,6 +154,21 @@ public sealed class JobRequirementsManager : ISharedPlaytimeManager
 
         reason = reasons.Count == 0 ? null : FormattedMessage.FromMarkup(string.Join('\n', reasons));
         return reason == null;
+    }
+
+    public bool CheckWhitelist(JobPrototype job, [NotNullWhen(false)] out FormattedMessage? reason)
+    {
+        reason = default;
+        if (!_cfg.GetCVar(CCVars.GameRoleWhitelist))
+            return true;
+
+        if (job.Whitelisted && !_jobWhitelists.Contains(job.ID))
+        {
+            reason = FormattedMessage.FromUnformatted(Loc.GetString("role-not-whitelisted"));
+            return false;
+        }
+
+        return true;
     }
 
     public TimeSpan FetchOverallPlaytime()

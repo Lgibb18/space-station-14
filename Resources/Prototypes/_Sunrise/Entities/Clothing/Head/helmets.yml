@@ -8,3 +8,32 @@
       sprite: _Sunrise/Clothing/Head/Helmets/security_medic.rsi
     - type: Clothing
       sprite: _Sunrise/Clothing/Head/Helmets/security_medic.rsi
+
+- type: entity
+  parent: ClothingHeadBase
+  id: ClothingHeadHelmetPilot
+  name: Шлем пилота Службы Безопасности
+  description: Толстый шлем пилота, обеспечивающий хорошую защиту головы.
+  components:
+  - type: Sprite
+    sprite: _Sunrise/Clothing/Head/Hats/pilothelmet.rsi
+  - type: Clothing
+    sprite: _Sunrise/Clothing/Head/Hats/pilothelmet.rsi
+  - type: Armor
+    modifiers:
+      coefficients:
+        Blunt: 0.85
+        Slash: 0.85
+        Piercing: 0.85
+        Heat: 0.85
+
+- type: entity
+  parent: ClothingHeadHelmetSwat
+  id: ClothingHeadHelmetPubg
+  name: Алтын
+  description: Укрепленный шлем, использующийся для подавления и разжигания бунтов
+  components:
+  - type: Sprite
+    sprite: _Sunrise/Clothing/Head/Helmets/tfhelm.rsi
+  - type: Clothing
+    sprite: _Sunrise/Clothing/Head/Helmets/tfhelm.rsi

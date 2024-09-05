@@ -2,6 +2,7 @@ using Content.Shared.Antag;
 using Content.Shared.Chat.Prototypes;
 using Content.Shared.Chemistry.Reagent;
 using Content.Shared.Damage;
+using Content.Shared.FixedPoint;
 using Content.Shared.Humanoid;
 using Content.Shared.Roles;
 using Content.Shared.StatusIcon;
@@ -14,23 +15,23 @@ using Robust.Shared.Serialization.TypeSerializers.Implementations.Custom.Prototy
 namespace Content.Shared.Zombies;
 
 [RegisterComponent, NetworkedComponent]
-public sealed partial class ZombieComponent : Component, IAntagStatusIconComponent
+public sealed partial class ZombieComponent : Component
 {
     /// <summary>
     /// The baseline infection chance you have if you are completely nude
     /// </summary>
     [ViewVariables(VVAccess.ReadWrite)]
-    public float MaxZombieInfectionChance = 0.80f;
+    public float MaxZombieInfectionChance = 0.8f;
 
     /// <summary>
     /// The minimum infection chance possible. This is simply to prevent
     /// being invincible by bundling up.
     /// </summary>
     [ViewVariables(VVAccess.ReadWrite)]
-    public float MinZombieInfectionChance = 0.25f;
+    public float MinZombieInfectionChance = 0.25f; // Sunrise-Edit
 
     [ViewVariables(VVAccess.ReadWrite)]
-    public float ZombieMovementSpeedDebuff = 0.70f;
+    public float ZombieMovementSpeedBuff = 0.95f; // Sunrise-Edit
 
     /// <summary>
     /// The skin color of the zombie
@@ -63,12 +64,6 @@ public sealed partial class ZombieComponent : Component, IAntagStatusIconCompone
     public string ZombieRoleId = "Zombie";
 
     /// <summary>
-    /// The EntityName of the humanoid to restore in case of cloning
-    /// </summary>
-    [DataField("beforeZombifiedEntityName"), ViewVariables(VVAccess.ReadOnly)]
-    public string BeforeZombifiedEntityName = string.Empty;
-
-    /// <summary>
     /// The CustomBaseLayers of the humanoid to restore in case of cloning
     /// </summary>
     [DataField("beforeZombifiedCustomBaseLayers")]
@@ -95,10 +90,7 @@ public sealed partial class ZombieComponent : Component, IAntagStatusIconCompone
     public TimeSpan NextTick;
 
     [DataField("zombieStatusIcon")]
-    public ProtoId<StatusIconPrototype> StatusIcon { get; set; } = "ZombieFaction";
-
-    [DataField]
-    public bool IconVisibleToGhost { get; set; } = true;
+    public ProtoId<FactionIconPrototype> StatusIcon { get; set; } = "ZombieFaction";
 
     /// <summary>
     /// Healing each second
@@ -112,7 +104,7 @@ public sealed partial class ZombieComponent : Component, IAntagStatusIconCompone
             { "Slash", -0.2 },
             { "Piercing", -0.2 },
             { "Heat", -0.02 },
-            { "Shock", -0.02 }
+            { "Shock", -0.02 },
         }
     };
 
@@ -132,7 +124,7 @@ public sealed partial class ZombieComponent : Component, IAntagStatusIconCompone
         {
             { "Blunt", -2 },
             { "Slash", -2 },
-            { "Piercing", -2 }
+            { "Piercing", -2 },
         }
     };
 
@@ -159,4 +151,39 @@ public sealed partial class ZombieComponent : Component, IAntagStatusIconCompone
     /// </summary>
     [DataField("newBloodReagent", customTypeSerializer: typeof(PrototypeIdSerializer<ReagentPrototype>))]
     public string NewBloodReagent = "ZombieBlood";
+
+    // Sunrise-Start
+    [DataField("actionJumpId", customTypeSerializer: typeof(PrototypeIdSerializer<EntityPrototype>))]
+    public string ActionJumpId = "ZombieJump";
+
+    [DataField("actionFlairId", customTypeSerializer: typeof(PrototypeIdSerializer<EntityPrototype>))]
+    public string ActionFlairId = "ZombieFlair";
+
+    [DataField]
+    public float ParalyzeTime = 5f;
+
+    [DataField]
+    public DamageSpecifier Damage = new()
+    {
+        DamageDict = new Dictionary<string, FixedPoint2>
+        {
+            { "Slash", 15 },
+        },
+    };
+
+    /// <summary>
+    /// Нельзя пролететь через толпу и всех переубивать
+    /// </summary>
+    [DataField]
+    public TimeSpan? LastThrowHit;
+
+    [DataField]
+    public float MaxThrow = 10f;
+
+    /// <summary>
+    /// Зомби не должны чувствовать очень далеко.
+    /// </summary>
+    [DataField]
+    public float MaxFlairDistance = 500f;
+    // Sunrise-End
 }

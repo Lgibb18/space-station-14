@@ -9,8 +9,10 @@
       time: 54000 #15 hrs # Sunrise-RoleTime
   startingGear: WardenGear
   icon: "JobIconWarden"
+  requireAdminNotify: true
   supervisors: job-supervisors-hos
   canBeAntag: false
+  displayWeight: 70  # Sunrise
   access:
   - Security
   - Brig
@@ -32,4 +34,8 @@
     eyes: ClothingEyesGlassesSecurity
     id: WardenPDA
     ears: ClothingHeadsetSecurity
-    pocket1: WeaponPistolMk58
+    pocket1: WeaponPistolG22NonLethal # Sunrise-Edit
+  storage:
+    back:
+    - Flash
+    #- MagazinePistol # Sunrise-Edit

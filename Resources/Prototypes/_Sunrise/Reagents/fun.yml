@@ -1,0 +1,26 @@
+- type: reagent
+  id: Aphrodesiac
+  name: reagent-name-aphrodesiac
+  group: Special
+  desc: reagent-desc-aphrodesiac
+  physicalDesc: reagent-physical-desc-aphrodesiac
+  flavor: funny
+  color: "#FF00E8"
+  metabolisms:
+    Narcotic:
+      effects:
+      - !type:PopupMessage
+        type: Local
+        messages: [ "aphrodesiac-effect1", "aphrodesiac-effect2" ]
+        probability: 0.1
+      - !type:GenericStatusEffect
+        key: LoveEffect
+        component: LoveVision
+        refresh: false
+        time: 10.0  # Полная баночка = 5 минут
+        type: Add
+      - !type:Jitter
+        refresh: false
+        time: 1.0  # Полная баночка = 1 минута тряски
+        amplitude: 2
+        frequency: 5
