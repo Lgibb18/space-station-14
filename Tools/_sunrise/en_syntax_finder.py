@@ -214,7 +214,12 @@ if __name__ == "__main__":
     'SPAS-12',
     'TBD',
     ' °C ( K)',
-    'SUNRISE14CM'
+    'SUNRISE14CM',
+    'Plague inc 2.0',
+    'SCP-',
+    'IcarusRevenge',
+    'SplikZerys',
+    'Kendrick'
     ]  # Добавьте сюда слова, которые нужно игнорировать
     
     # Список файлов, которые нужно игнорировать
